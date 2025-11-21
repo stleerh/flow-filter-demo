@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Flow Filter Selector</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 600px;
+            margin: 50px auto;
+            padding: 20px;
+        }
+        label {
+            display: block;
+            margin-bottom: 10px;
+            font-weight: bold;
+        }
+        .filter-row {
+            display: flex;
+            gap: 10px;
+            align-items: flex-start;
+        }
+        .dropdown-container {
+            position: relative;
+            flex: 1;
+        }
+        .value-container {
+            position: relative;
+            flex: 2;
+        }
+        #searchInput, #valueInput {
+            width: 100%;
+            padding: 8px;
+            font-size: 14px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+        #operatorSelect {
+            padding: 8px;
+            font-size: 14px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            background-color: white;
+            cursor: pointer;
+        }
+        #optionsList, #valuesList {
+            position: absolute;
+            width: 100%;
+            max-height: 300px;
+            overflow-y: auto;
+            border: 1px solid #ccc;
+            border-top: none;
+            background-color: white;
+            display: none;
+            z-index: 1000;
+            box-sizing: border-box;
+        }
+        .option-item, .value-item {
+            padding: 8px;
+            cursor: pointer;
+            border-bottom: 1px solid #f0f0f0;
+        }
+        .option-item:hover, .value-item:hover {
+            background-color: #e9e9e9;
+        }
+        .option-item.hidden, .value-item.hidden {
+            display: none;
+        }
+        #selectedValue {
+            margin-top: 20px;
+            padding: 10px;
+            background-color: #f5f5f5;
+            border-radius: 4px;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <h1>Flow Filter</h1>
+    <label for="searchInput">Select Filter:</label>
+    <div class="filter-row">
+        <div class="dropdown-container">
+            <input type="text" id="searchInput" placeholder="field name">
+            <div id="optionsList">
+            <div class="option-item" data-value="dest_ip">Dest IP</div>
+            <div class="option-item" data-value="dest_kind">Dest Kind</div>
+            <div class="option-item" data-value="dest_mac">Dest MAC</div>
+            <div class="option-item" data-value="dest_name">Dest Name</div>
+            <div class="option-item" data-value="dest_namespace">Dest Namespace</div>
+            <div class="option-item" data-value="dest_node_ip">Dest Node IP</div>
+            <div class="option-item" data-value="dest_node_name">Dest Node Name</div>
+            <div class="option-item" data-value="dest_owner_name">Dest Owner Name</div>
+            <div class="option-item" data-value="dest_port">Dest Port</div>
+            <div class="option-item" data-value="dest_resource">Dest Resource</div>
+            <div class="option-item" data-value="dest_subnet_label">Dest Subnet Label</div>
+            <div class="option-item" data-value="dscp">DSCP</div>
+            <div class="option-item" data-value="flow_layer">Flow layer</div>
+            <div class="option-item" data-value="icmp_code">ICMP code</div>
+            <div class="option-item" data-value="icmp_type">ICMP type</div>
+            <div class="option-item" data-value="interface_directions">Interface Directions</div>
+            <div class="option-item" data-value="network_interfaces">Network interfaces</div>
+            <div class="option-item" data-value="node_direction">Node Direction</div>
+            <div class="option-item" data-value="protocol">Protocol</div>
+            <div class="option-item" data-value="source_ip">Source IP</div>
+            <div class="option-item" data-value="source_kind">Source Kind</div>
+            <div class="option-item" data-value="source_mac">Source MAC</div>
+            <div class="option-item" data-value="source_name">Source Name</div>
+            <div class="option-item" data-value="source_namespace">Source Namespace</div>
+            <div class="option-item" data-value="source_node_ip">Source Node IP</div>
+            <div class="option-item" data-value="source_node_name">Source Node Name</div>
+            <div class="option-item" data-value="source_owner_name">Source Owner Name</div>
+            <div class="option-item" data-value="source_port">Source Port</div>
+            <div class="option-item" data-value="source_resource">Source Resource</div>
+            <div class="option-item" data-value="source_subnet_label">Source Subnet Label</div>
+            <div class="option-item" data-value="tcp_flags">TCP flags</div>
+            </div>
+        </div>
+        <select id="operatorSelect">
+            <option value="=" selected>=</option>
+            <option value="!=">!=</option>
+        </select>
+        <div class="value-container">
+            <input type="text" id="valueInput" placeholder="values (space-separated)">
+            <div id="valuesList">
+                <div class="value-item">default</div>
+                <div class="value-item">kube-node-lease</div>
+                <div class="value-item">kube-public</div>
+                <div class="value-item">kube-system</div>
+                <div class="value-item">netobserv</div>
+                <div class="value-item">netobserv-loki</div>
+                <div class="value-item">netobserv-privileged</div>
+                <div class="value-item">openshift</div>
+                <div class="value-item">openshift-apiserver</div>
+                <div class="value-item">openshift-apiserver-operator</div>
+                <div class="value-item">openshift-authentication</div>
+                <div class="value-item">openshift-authentication-operator</div>
+                <div class="value-item">openshift-catalogd</div>
+                <div class="value-item">openshift-cloud-controller-manager</div>
+                <div class="value-item">openshift-cloud-controller-manager-operator</div>
+                <div class="value-item">openshift-cloud-credential-operator</div>
+                <div class="value-item">openshift-cloud-network-config-controller</div>
+                <div class="value-item">openshift-cloud-platform-infra</div>
+                <div class="value-item">openshift-cluster-csi-drivers</div>
+                <div class="value-item">openshift-cluster-machine-approver</div>
+                <div class="value-item">openshift-cluster-node-tuning-operator</div>
+                <div class="value-item">openshift-cluster-olm-operator</div>
+                <div class="value-item">openshift-cluster-samples-operator</div>
+                <div class="value-item">openshift-cluster-storage-operator</div>
+                <div class="value-item">openshift-cluster-version</div>
+                <div class="value-item">openshift-config</div>
+                <div class="value-item">openshift-config-managed</div>
+                <div class="value-item">openshift-config-operator</div>
+                <div class="value-item">openshift-console</div>
+                <div class="value-item">openshift-console-operator</div>
+                <div class="value-item">openshift-console-user-settings</div>
+                <div class="value-item">openshift-controller-manager</div>
+                <div class="value-item">openshift-controller-manager-operator</div>
+                <div class="value-item">openshift-dns</div>
+                <div class="value-item">openshift-dns-operator</div>
+                <div class="value-item">openshift-etcd</div>
+                <div class="value-item">openshift-etcd-operator</div>
+                <div class="value-item">openshift-host-network</div>
+                <div class="value-item">openshift-image-registry</div>
+                <div class="value-item">openshift-infra</div>
+                <div class="value-item">openshift-ingress</div>
+                <div class="value-item">openshift-ingress-canary</div>
+                <div class="value-item">openshift-ingress-operator</div>
+                <div class="value-item">openshift-insights</div>
+                <div class="value-item">openshift-kni-infra</div>
+                <div class="value-item">openshift-kube-apiserver</div>
+                <div class="value-item">openshift-kube-apiserver-operator</div>
+                <div class="value-item">openshift-kube-controller-manager</div>
+                <div class="value-item">openshift-kube-controller-manager-operator</div>
+                <div class="value-item">openshift-kube-scheduler</div>
+                <div class="value-item">openshift-kube-scheduler-operator</div>
+                <div class="value-item">openshift-kube-storage-version-migrator</div>
+                <div class="value-item">openshift-kube-storage-version-migrator-operator</div>
+                <div class="value-item">openshift-machine-api</div>
+                <div class="value-item">openshift-machine-config-operator</div>
+                <div class="value-item">openshift-marketplace</div>
+                <div class="value-item">openshift-monitoring</div>
+                <div class="value-item">openshift-multus</div>
+                <div class="value-item">openshift-netobserv-operator</div>
+                <div class="value-item">openshift-network-console</div>
+                <div class="value-item">openshift-network-diagnostics</div>
+                <div class="value-item">openshift-network-node-identity</div>
+                <div class="value-item">openshift-network-operator</div>
+                <div class="value-item">openshift-node</div>
+                <div class="value-item">openshift-nutanix-infra</div>
+                <div class="value-item">openshift-oauth-apiserver</div>
+                <div class="value-item">openshift-openstack-infra</div>
+                <div class="value-item">openshift-operator-controller</div>
+                <div class="value-item">openshift-operator-lifecycle-manager</div>
+                <div class="value-item">openshift-operators</div>
+                <div class="value-item">openshift-operators-redhat</div>
+                <div class="value-item">openshift-ovirt-infra</div>
+                <div class="value-item">openshift-ovn-kubernetes</div>
+                <div class="value-item">openshift-route-controller-manager</div>
+                <div class="value-item">openshift-service-ca</div>
+                <div class="value-item">openshift-service-ca-operator</div>
+                <div class="value-item">openshift-user-workload-monitoring</div>
+                <div class="value-item">openshift-vsphere-infr</div>
+            </div>
+        </div>
+    </div>
+    <div id="selectedValue"></div>
+
+    <script>
+        const searchInput = document.getElementById('searchInput');
+        const optionsList = document.getElementById('optionsList');
+        const options = document.querySelectorAll('.option-item');
+        const selectedValue = document.getElementById('selectedValue');
+
+        // Show dropdown when input is focused
+        searchInput.addEventListener('focus', function() {
+            optionsList.style.display = 'block';
+        });
+
+        // Filter options as user types
+        searchInput.addEventListener('input', function() {
+            const filter = this.value.toLowerCase();
+
+            options.forEach(option => {
+                const text = option.textContent.toLowerCase();
+                if (text.includes(filter)) {
+                    option.classList.remove('hidden');
+                } else {
+                    option.classList.add('hidden');
+                }
+            });
+        });
+
+        // Handle option selection
+        options.forEach(option => {
+            option.addEventListener('click', function() {
+                searchInput.value = this.textContent;
+                optionsList.style.display = 'none';
+                selectedValue.textContent = 'Selected: ' + this.getAttribute('data-value');
+                selectedValue.style.display = 'block';
+            });
+        });
+
+        // Close dropdown when clicking outside
+        document.addEventListener('click', function(event) {
+            if (!event.target.closest('.dropdown-container')) {
+                optionsList.style.display = 'none';
+            }
+            if (!event.target.closest('.value-container')) {
+                valuesList.style.display = 'none';
+            }
+        });
+
+        // Value input handling
+        const valueInput = document.getElementById('valueInput');
+        const valuesList = document.getElementById('valuesList');
+        const valueItems = document.querySelectorAll('.value-item');
+
+        // Show value suggestions when input is focused
+        valueInput.addEventListener('focus', function() {
+            valuesList.style.display = 'block';
+            filterValueSuggestions();
+        });
+
+        // Filter value suggestions as user types
+        valueInput.addEventListener('input', function() {
+            valuesList.style.display = 'block';
+            filterValueSuggestions();
+        });
+
+        function filterValueSuggestions() {
+            const inputValue = valueInput.value;
+            const lastSpaceIndex = inputValue.lastIndexOf(' ');
+            const currentWord = lastSpaceIndex >= 0 ? inputValue.substring(lastSpaceIndex + 1).toLowerCase() : inputValue.toLowerCase();
+
+            valueItems.forEach(item => {
+                const text = item.textContent.toLowerCase();
+                if (text.includes(currentWord)) {
+                    item.classList.remove('hidden');
+                } else {
+                    item.classList.add('hidden');
+                }
+            });
+        }
+
+        // Handle value suggestion selection
+        valueItems.forEach(item => {
+            item.addEventListener('click', function() {
+                const inputValue = valueInput.value;
+                const lastSpaceIndex = inputValue.lastIndexOf(' ');
+
+                if (lastSpaceIndex >= 0) {
+                    // Replace the last word
+                    valueInput.value = inputValue.substring(0, lastSpaceIndex + 1) + this.textContent + ' ';
+                } else {
+                    // Replace entire input
+                    valueInput.value = this.textContent + ' ';
+                }
+
+                valueInput.focus();
+                filterValueSuggestions();
+            });
+        });
+    </script>
+</body>
+</html>
