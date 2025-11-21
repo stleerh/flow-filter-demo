@@ -432,6 +432,9 @@
 
             // Validate field input on blur
             fieldInput.addEventListener('blur', function() {
+                setTimeout(() => {
+                    fieldOptionsList.style.display = 'none';
+                }, 150);
                 validateFieldInput();
                 updateValueFieldBehavior();
             });
