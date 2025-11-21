@@ -1,6 +1,6 @@
-# Flow Filter Selector
+# Flow Filter Selector Demo
 
-A dynamic HTML interface for building network flow filters with intelligent field validation and context-aware value inputs.
+A prototype for a network flow filter with intelligent field validation and context-aware value inputs.
 
 ## Features
 
@@ -9,107 +9,63 @@ A dynamic HTML interface for building network flow filters with intelligent fiel
 - Remove individual filters with the **✕** button
 - Clear all filters with the **Clear Filters** button
 
-### Smart Field Selection
-- Searchable dropdown with 31 network flow field options
+### Smart Field Name Selection
+- Searchable dropdown
 - Type-ahead filtering for quick field selection
 - Case-insensitive validation with automatic correction
 - Invalid entries highlighted in red italics
 
 ### Context-Aware Value Input
-The value field adapts based on the selected field name:
+- Value field adapts based on the selected field name
 
-#### Namespace Fields
+#### Field Name: Namespace Fields
 **Fields:** Source Namespace, Dest Namespace
 - Dropdown with predefined OpenShift namespace values
 - Tag-based multi-value input
 - Type or select from suggestions
+- Case-insensitive validation with automatic correction for enumerated values
+- Values can be entered with double or single quotes for an exact match
 
-#### Direction Fields
+#### Field Name: Direction Fields
 **Fields:** Interface Directions, Node Direction
 - Restricted to "Ingress" or "Egress" only
 - Dropdown selection
 - Validation ensures only valid directions
 
-#### TCP Flags
+#### Field Name: TCP Flags
 **Field:** TCP flags
-- Dropdown with valid TCP flags: FIN, SYN, RST, PSH, ACK, URG, ECE, CWR, SYN_ACK, FIN_ACK, RST_ACK
+- Dropdown with valid TCP flags
 - Multiple flags supported
 
-#### IP Address Fields
+#### Field Name: IP Address Fields
 **Fields:** Any field containing "IP" (Source IP, Dest IP, Source Node IP, Dest Node IP)
 - Plain text input with IP address validation
 - Regex validation: `xxx.xxx.xxx.xxx` format
 - Multiple IPs supported (space-separated)
 
-#### MAC Address Fields
+#### Field Name: MAC Address Fields
 **Fields:** Source MAC, Dest MAC
 - Plain text input with MAC address validation
 - Supports both formats: `XX:XX:XX:XX:XX:XX` and `XX-XX-XX-XX-XX-XX`
 - Multiple MACs supported (space-separated)
 
 #### Other Fields
-All other fields accept free-form text input.
+- All other fields accept free-form text input.
 
 ### Tag-Based Value Entry
-- Values appear as blue rounded tags with white text
+- Valid values appear as blue rounded tags with white text
 - Click **×** on any tag to remove it
-- Press **Space** or **Enter** to create a tag
+- Press **Space** or **Enter** to create a tag. Press **Tab** to create a tag and move to the next field.
 - Backspace on empty input removes the last tag
 - Selected values are removed from dropdown to prevent duplicates
 - Values return to dropdown when tags are removed
 
-### Quote Handling
-- Values can be entered with double or single quotes
-- Quotes are automatically stripped: `"netobserv"` becomes `netobserv`
-- Useful for values with special characters
-
 ### Validation & Feedback
-- **Green border flash**: Valid value entered
 - **Red border/text**: Invalid value detected
 - **Visual feedback**: Real-time validation on blur
 
 ### Return Traffic Option
 - Checkbox for including return traffic in the filter
-- Located at the bottom right
-
-## Available Fields
-
-### Destination Fields
-- Dest IP
-- Dest Kind
-- Dest MAC
-- Dest Name
-- Dest Namespace
-- Dest Node IP
-- Dest Node Name
-- Dest Owner Name
-- Dest Port
-- Dest Resource
-- Dest Subnet Label
-
-### Source Fields
-- Source IP
-- Source Kind
-- Source MAC
-- Source Name
-- Source Namespace
-- Source Node IP
-- Source Node Name
-- Source Owner Name
-- Source Port
-- Source Resource
-- Source Subnet Label
-
-### Network Properties
-- DSCP
-- Flow layer
-- ICMP code
-- ICMP type
-- Interface Directions
-- Network interfaces
-- Node Direction
-- Protocol
-- TCP flags
 
 ## Usage
 
@@ -125,6 +81,38 @@ All other fields accept free-form text input.
 7. **Check "Return traffic"** if needed
 8. **Clear all** using the Clear Filters button
 
+### Use Cases
+
+See how easy it is to create these use-case scenario.
+
+1. I want all traffic for `netobserv` namespace.
+```
+[Dest Namespace] [=] [netobserv] ✓ Return Traffic
+  -or-
+[Source Namespace] [=] [netobserv] ✓ Return Traffic
+```
+
+2. I want all traffic between the namespaces `netobserv` and `openshift-console`.
+```
+[Source Namespace] [=] [netobserv]
+[Dest Namespace] [=] [openshift-console] ✓ Return Traffic
+```
+
+3. I want all SYN traffic.
+```
+[TCP flags] [=] [SYN]
+```
+
+If you want the acknowledgement,
+```
+[TCP flags] [=] [SYN SYN_ACK]
+```
+
+4. I want all web request traffic.
+```
+[Dest Port] [=] [80 443]
+```
+
 ## Technical Details
 
 - **Pure HTML/CSS/JavaScript** - No dependencies required
@@ -132,21 +120,6 @@ All other fields accept free-form text input.
 - **Tag-based UI** - Similar to popular tagging interfaces
 - **Smart validation** - Field-specific validation rules
 - **Dynamic dropdowns** - Context-aware suggestions
-
-## Browser Compatibility
-
-Works in all modern browsers supporting:
-- ES6 JavaScript
-- CSS Flexbox
-- HTML5 form elements
-
-## File Structure
-
-```
-filter/
-├── index.html          # Main application file
-└── README.md           # This file
-```
 
 ## License
 

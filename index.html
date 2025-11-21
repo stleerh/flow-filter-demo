@@ -390,7 +390,7 @@
             const valueTags = [];
             let previousFieldType = null;
 
-            // Helper function to strip quotes from values
+            // Helper function to strip quotes for validation purposes only
             function stripQuotes(value) {
                 const trimmed = value.trim();
                 if ((trimmed.startsWith('"') && trimmed.endsWith('"')) ||
@@ -591,21 +591,26 @@
                 const fieldType = getFieldType(fieldName);
 
                 if (fieldType === 'ip') {
+                    // Don't strip quotes - reject quoted values
                     const ipRegex = /^(\d{1,3}\.){3}\d{1,3}$/;
-                    return ipRegex.test(value);
+                    return ipRegex.test(value.trim());
                 } else if (fieldType === 'mac') {
+                    // Don't strip quotes - reject quoted values
                     const macRegex = /^([0-9A-Fa-f]{2}[:-]){5}([0-9A-Fa-f]{2})$/;
-                    return macRegex.test(value);
+                    return macRegex.test(value.trim());
                 } else if (fieldType === 'direction') {
+                    // Don't strip quotes - reject quoted values
                     const validDirections = ['ingress', 'egress'];
-                    return validDirections.includes(value.toLowerCase());
+                    return validDirections.includes(value.trim().toLowerCase());
                 } else if (fieldType === 'tcp_flags') {
+                    // Don't strip quotes - reject quoted values
                     const validFlags = ['FIN', 'SYN', 'RST', 'PSH', 'ACK', 'URG', 'ECE', 'CWR', 'SYN_ACK', 'FIN_ACK', 'RST_ACK'];
-                    return validFlags.includes(value.toUpperCase());
+                    return validFlags.includes(value.trim().toUpperCase());
                 }
 
-                // For namespace and text, any non-empty value is valid
-                return value.trim() !== '';
+                // For namespace and text, strip quotes for validation
+                const cleanValue = stripQuotes(value);
+                return cleanValue.trim() !== '';
             }
 
             function updateValueFieldBehavior() {
@@ -722,13 +727,27 @@
                 const fieldType = getFieldType(fieldName);
                 const inputValue = this.value.trim();
 
+                // Auto-correct case for enumerated fields on blur
+                if (inputValue) {
+                    if (fieldType === 'direction') {
+                        const validDirections = ['Ingress', 'Egress'];
+                        const matched = validDirections.find(dir => dir.toLowerCase() === inputValue.toLowerCase());
+                        if (matched) {
+                            this.value = matched;
+                        }
+                    } else if (fieldType === 'tcp_flags') {
+                        const validFlags = ['FIN', 'SYN', 'RST', 'PSH', 'ACK', 'URG', 'ECE', 'CWR', 'SYN_ACK', 'FIN_ACK', 'RST_ACK'];
+                        const matched = validFlags.find(flag => flag.toUpperCase() === inputValue.toUpperCase());
+                        if (matched) {
+                            this.value = matched;
+                        }
+                    }
+                }
+
                 // Validate for IP and MAC fields on blur
                 if (fieldType === 'ip' || fieldType === 'mac') {
                     if (inputValue) {
-                        const rawValue = this.value.trim();
-                        const value = stripQuotes(rawValue);
-
-                        if (isValidValue(value)) {
+                        if (isValidValue(inputValue)) {
                             valueInputWrapper.classList.remove('invalid');
                             valueInputWrapper.classList.add('valid');
                             setTimeout(() => {
@@ -766,17 +785,34 @@
             valueInputField.addEventListener('keydown', function(e) {
                 if (e.key === ' ' || e.key === 'Enter' || e.key === 'Tab') {
                     const rawValue = this.value.trim();
-                    const value = stripQuotes(rawValue);
-                    if (value) {
-                        if (isValidValue(value)) {
+                    if (rawValue) {
+                        if (isValidValue(rawValue)) {
                             e.preventDefault();
-                            addValueTag(value);
+
+                            // Normalize case for enumerated fields
+                            const fieldName = fieldInput.value.trim();
+                            const fieldType = getFieldType(fieldName);
+                            let valueToAdd = rawValue;
+
+                            if (fieldType === 'direction') {
+                                const validDirections = ['Ingress', 'Egress'];
+                                const matched = validDirections.find(dir => dir.toLowerCase() === rawValue.toLowerCase());
+                                if (matched) {
+                                    valueToAdd = matched;
+                                }
+                            } else if (fieldType === 'tcp_flags') {
+                                const validFlags = ['FIN', 'SYN', 'RST', 'PSH', 'ACK', 'URG', 'ECE', 'CWR', 'SYN_ACK', 'FIN_ACK', 'RST_ACK'];
+                                const matched = validFlags.find(flag => flag.toUpperCase() === rawValue.toUpperCase());
+                                if (matched) {
+                                    valueToAdd = matched;
+                                }
+                            }
+
+                            addValueTag(valueToAdd);
                             this.value = '';
                             valueInputWrapper.classList.remove('invalid', 'valid');
 
                             // Show dropdown again for next value if applicable
-                            const fieldName = fieldInput.value.trim();
-                            const fieldType = getFieldType(fieldName);
                             if (fieldType === 'namespace' || fieldType === 'direction' || fieldType === 'tcp_flags') {
                                 valueOptionsList.style.display = 'block';
                                 filterValueSuggestions();
@@ -807,7 +843,17 @@
 
             function filterValueSuggestions() {
                 const inputValue = valueInputField.value;
-                const currentWord = stripQuotes(inputValue).toLowerCase();
+                const fieldName = fieldInput.value.trim();
+                const fieldType = getFieldType(fieldName);
+
+                // Only strip quotes for namespace and text fields
+                let currentWord;
+                if (fieldType === 'namespace' || fieldType === 'text') {
+                    currentWord = stripQuotes(inputValue).toLowerCase();
+                } else {
+                    // For direction and tcp_flags, don't strip quotes
+                    currentWord = inputValue.trim().toLowerCase();
+                }
 
                 // Get current value items from the dropdown
                 const currentValueItems = valueOptionsList.querySelectorAll('.value-item');
