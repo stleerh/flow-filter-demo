@@ -33,6 +33,63 @@
             position: relative;
             flex: 2;
         }
+        .value-input-wrapper {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 4px;
+            padding: 4px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            min-height: 40px;
+            align-items: center;
+            background-color: white;
+            cursor: text;
+            box-sizing: border-box;
+        }
+        .value-input-wrapper:not(.has-tags) {
+            border: none;
+            padding: 0;
+            min-height: 40px;
+            height: 40px;
+            display: block;
+        }
+        .value-input-wrapper:not(.has-tags) .value-input-field {
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            padding: 8px;
+            height: 40px;
+            width: 100%;
+            box-sizing: border-box;
+            line-height: 1.5;
+            font-size: 14px;
+        }
+        .value-input-wrapper.invalid {
+            border-color: #dc3545;
+        }
+        .value-input-wrapper.valid {
+            border-color: #28a745;
+        }
+        .value-tag {
+            display: inline-flex;
+            align-items: center;
+            background-color: #2c5aa0;
+            color: white;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 13px;
+            gap: 6px;
+            line-height: 1.4;
+        }
+        .value-tag-remove {
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 14px;
+            line-height: 1;
+            padding: 0 2px;
+        }
+        .value-tag-remove:hover {
+            color: #ffcccc;
+        }
         .filter-row input {
             width: 100%;
             padding: 8px;
@@ -40,6 +97,19 @@
             border: 1px solid #ccc;
             border-radius: 4px;
             box-sizing: border-box;
+            height: 40px;
+        }
+        .value-input-field {
+            border: none;
+            outline: none;
+            flex: 1;
+            min-width: 100px;
+            padding: 4px;
+            font-size: 14px;
+        }
+        .value-input-wrapper.has-tags .value-input-field {
+            height: auto;
+            max-height: 30px;
         }
         .field-input.invalid, .value-input.invalid {
             color: #dc3545;
@@ -56,9 +126,12 @@
             border-radius: 4px;
             background-color: white;
             cursor: pointer;
+            height: 40px;
+            box-sizing: border-box;
         }
         .options-list {
             position: absolute;
+            top: 100%;
             width: 100%;
             max-height: 300px;
             overflow-y: auto;
@@ -68,6 +141,9 @@
             display: none;
             z-index: 1000;
             box-sizing: border-box;
+        }
+        .value-options {
+            margin-top: 0;
         }
         .option-item, .value-item {
             padding: 8px;
@@ -260,7 +336,9 @@
                     <option value="!=">!=</option>
                 </select>
                 <div class="value-container">
-                    <input type="text" class="value-input" placeholder="values (space-separated)" data-filter-id="${filterId}">
+                    <div class="value-input-wrapper" data-filter-id="${filterId}">
+                        <input type="text" class="value-input-field" placeholder="values" data-filter-id="${filterId}">
+                    </div>
                     <div class="options-list value-options">
                         ${valueSuggestionsHtml}
                     </div>
@@ -285,9 +363,23 @@
             const fieldOptionsList = filterRow.querySelector('.field-options');
             const fieldOptions = filterRow.querySelectorAll('.field-options .option-item');
 
-            const valueInput = filterRow.querySelector('.value-input');
+            const valueInputWrapper = filterRow.querySelector('.value-input-wrapper');
+            const valueInputField = filterRow.querySelector('.value-input-field');
             const valueOptionsList = filterRow.querySelector('.value-options');
             const valueItems = filterRow.querySelectorAll('.value-options .value-item');
+
+            const valueTags = [];
+            let previousFieldType = null;
+
+            // Helper function to strip quotes from values
+            function stripQuotes(value) {
+                const trimmed = value.trim();
+                if ((trimmed.startsWith('"') && trimmed.endsWith('"')) ||
+                    (trimmed.startsWith("'") && trimmed.endsWith("'"))) {
+                    return trimmed.slice(1, -1);
+                }
+                return trimmed;
+            }
 
             // Field input events
             fieldInput.addEventListener('focus', function() {
@@ -390,16 +482,127 @@
                 return 'text';
             }
 
+            function addValueTag(value) {
+                if (!value || valueTags.includes(value)) return;
+
+                // Validate the value before adding
+                if (!isValidValue(value)) {
+                    return;
+                }
+
+                valueTags.push(value);
+
+                const tag = document.createElement('span');
+                tag.className = 'value-tag';
+                tag.innerHTML = `
+                    <span>${value}</span>
+                    <span class="value-tag-remove">×</span>
+                `;
+
+                tag.querySelector('.value-tag-remove').addEventListener('click', function(e) {
+                    e.stopPropagation();
+                    removeValueTag(value);
+                });
+
+                valueInputWrapper.insertBefore(tag, valueInputField);
+
+                // Update has-tags class
+                if (valueTags.length > 0) {
+                    valueInputWrapper.classList.add('has-tags');
+                }
+
+                // Hide the value from dropdown if it exists
+                hideValueFromDropdown(value);
+            }
+
+            function hideValueFromDropdown(value) {
+                const currentValueItems = valueOptionsList.querySelectorAll('.value-item');
+                currentValueItems.forEach(item => {
+                    if (item.textContent.toLowerCase() === value.toLowerCase()) {
+                        item.setAttribute('data-selected', 'true');
+                        item.classList.add('hidden');
+                    }
+                });
+            }
+
+            function showValueInDropdown(value) {
+                const currentValueItems = valueOptionsList.querySelectorAll('.value-item');
+                currentValueItems.forEach(item => {
+                    if (item.textContent.toLowerCase() === value.toLowerCase()) {
+                        item.removeAttribute('data-selected');
+                        item.classList.remove('hidden');
+                    }
+                });
+            }
+
+            function removeValueTag(value) {
+                const index = valueTags.indexOf(value);
+                if (index > -1) {
+                    valueTags.splice(index, 1);
+                }
+
+                // Remove the tag element
+                const tags = valueInputWrapper.querySelectorAll('.value-tag');
+                tags.forEach(tag => {
+                    if (tag.textContent.replace('×', '').trim() === value) {
+                        tag.remove();
+                    }
+                });
+
+                // Update has-tags class
+                if (valueTags.length === 0) {
+                    valueInputWrapper.classList.remove('has-tags');
+                }
+
+                // Show the value back in dropdown
+                showValueInDropdown(value);
+
+                // Show dropdown for fields with dropdown options after any removal
+                const fieldName = fieldInput.value.trim();
+                const fieldType = getFieldType(fieldName);
+                if (fieldType === 'namespace' || fieldType === 'direction' || fieldType === 'tcp_flags') {
+                    valueInputField.focus();
+                    valueOptionsList.style.display = 'block';
+                    filterValueSuggestions();
+                }
+            }
+
+            function isValidValue(value) {
+                const fieldName = fieldInput.value.trim();
+                const fieldType = getFieldType(fieldName);
+
+                if (fieldType === 'ip') {
+                    const ipRegex = /^(\d{1,3}\.){3}\d{1,3}$/;
+                    return ipRegex.test(value);
+                } else if (fieldType === 'mac') {
+                    const macRegex = /^([0-9A-Fa-f]{2}[:-]){5}([0-9A-Fa-f]{2})$/;
+                    return macRegex.test(value);
+                } else if (fieldType === 'direction') {
+                    const validDirections = ['ingress', 'egress'];
+                    return validDirections.includes(value.toLowerCase());
+                } else if (fieldType === 'tcp_flags') {
+                    const validFlags = ['FIN', 'SYN', 'RST', 'PSH', 'ACK', 'URG', 'ECE', 'CWR', 'SYN_ACK', 'FIN_ACK', 'RST_ACK'];
+                    return validFlags.includes(value.toUpperCase());
+                }
+
+                // For namespace and text, any non-empty value is valid
+                return value.trim() !== '';
+            }
+
             function updateValueFieldBehavior() {
                 const fieldName = fieldInput.value.trim();
                 const fieldType = getFieldType(fieldName);
+
+                // Only clear values if field type has changed
+                const fieldTypeChanged = previousFieldType !== null && previousFieldType !== fieldType;
+                previousFieldType = fieldType;
 
                 // Clear existing dropdown options and rebuild based on field type
                 valueOptionsList.innerHTML = '';
 
                 // Update placeholder and dropdown based on field type
                 if (fieldType === 'namespace') {
-                    valueInput.placeholder = 'values (space-separated)';
+                    valueInputField.placeholder = 'values';
                     // Rebuild namespace dropdown
                     valueOptions.forEach(val => {
                         const item = document.createElement('div');
@@ -408,8 +611,10 @@
                         valueOptionsList.appendChild(item);
                     });
                     attachValueItemHandlers();
+                    // Hide already selected values
+                    valueTags.forEach(tag => hideValueFromDropdown(tag));
                 } else if (fieldType === 'direction') {
-                    valueInput.placeholder = 'Ingress or Egress';
+                    valueInputField.placeholder = 'Ingress or Egress';
                     // Build direction dropdown
                     ['Ingress', 'Egress'].forEach(val => {
                         const item = document.createElement('div');
@@ -418,8 +623,10 @@
                         valueOptionsList.appendChild(item);
                     });
                     attachValueItemHandlers();
+                    // Hide already selected values
+                    valueTags.forEach(tag => hideValueFromDropdown(tag));
                 } else if (fieldType === 'tcp_flags') {
-                    valueInput.placeholder = 'TCP flags (space-separated)';
+                    valueInputField.placeholder = 'TCP flags';
                     // Build TCP flags dropdown
                     ['FIN', 'SYN', 'RST', 'PSH', 'ACK', 'URG', 'ECE', 'CWR', 'SYN_ACK', 'FIN_ACK', 'RST_ACK'].forEach(val => {
                         const item = document.createElement('div');
@@ -428,43 +635,47 @@
                         valueOptionsList.appendChild(item);
                     });
                     attachValueItemHandlers();
+                    // Hide already selected values
+                    valueTags.forEach(tag => hideValueFromDropdown(tag));
                 } else if (fieldType === 'ip') {
-                    valueInput.placeholder = 'IP addresses (space-separated)';
+                    valueInputField.placeholder = 'IP addresses';
                 } else if (fieldType === 'mac') {
-                    valueInput.placeholder = 'MAC addresses (space-separated)';
+                    valueInputField.placeholder = 'MAC addresses';
                 } else {
-                    valueInput.placeholder = 'values (space-separated)';
+                    valueInputField.placeholder = 'values';
                 }
 
-                // Clear the value input when field type changes
-                valueInput.value = '';
-                valueInput.classList.remove('invalid', 'valid');
+                // Only clear the value input when field type changes
+                if (fieldTypeChanged) {
+                    valueInputField.value = '';
+                    valueTags.length = 0;
+                    valueInputWrapper.querySelectorAll('.value-tag').forEach(tag => tag.remove());
+                    valueInputWrapper.classList.remove('invalid', 'valid', 'has-tags');
+                }
             }
 
             function attachValueItemHandlers() {
                 const currentValueItems = valueOptionsList.querySelectorAll('.value-item');
                 currentValueItems.forEach(item => {
                     item.addEventListener('click', function() {
-                        const inputValue = valueInput.value;
-                        const lastSpaceIndex = inputValue.lastIndexOf(' ');
+                        addValueTag(this.textContent);
+                        valueInputField.value = '';
+                        valueInputField.focus();
 
-                        if (lastSpaceIndex >= 0) {
-                            valueInput.value = inputValue.substring(0, lastSpaceIndex + 1) + this.textContent + ' ';
-                        } else {
-                            valueInput.value = this.textContent + ' ';
-                        }
-
-                        valueInput.focus();
-                        const fieldType = getFieldType(fieldInput.value.trim());
-                        if (fieldType === 'namespace' || fieldType === 'direction' || fieldType === 'tcp_flags') {
-                            filterValueSuggestions();
-                        }
+                        // Show dropdown again for next value
+                        valueOptionsList.style.display = 'block';
+                        filterValueSuggestions();
                     });
                 });
             }
 
+            // Click on wrapper focuses the input
+            valueInputWrapper.addEventListener('click', function() {
+                valueInputField.focus();
+            });
+
             // Value input events
-            valueInput.addEventListener('focus', function() {
+            valueInputField.addEventListener('focus', function() {
                 const fieldName = fieldInput.value.trim();
                 const fieldType = getFieldType(fieldName);
 
@@ -475,12 +686,12 @@
                 }
             });
 
-            valueInput.addEventListener('input', function() {
+            valueInputField.addEventListener('input', function() {
                 const fieldName = fieldInput.value.trim();
                 const fieldType = getFieldType(fieldName);
 
                 // Clear validation state while typing
-                valueInput.classList.remove('invalid', 'valid');
+                valueInputWrapper.classList.remove('invalid', 'valid');
 
                 // Show dropdown for fields with dropdown options
                 if (fieldType === 'namespace' || fieldType === 'direction' || fieldType === 'tcp_flags') {
@@ -489,20 +700,51 @@
                 }
             });
 
-            valueInput.addEventListener('blur', function() {
-                validateValueInput();
+            valueInputField.addEventListener('keydown', function(e) {
+                if (e.key === ' ' || e.key === 'Enter') {
+                    e.preventDefault();
+                    const rawValue = this.value.trim();
+                    const value = stripQuotes(rawValue);
+                    if (value) {
+                        if (isValidValue(value)) {
+                            addValueTag(value);
+                            this.value = '';
+
+                            // Show dropdown again for next value if applicable
+                            const fieldName = fieldInput.value.trim();
+                            const fieldType = getFieldType(fieldName);
+                            if (fieldType === 'namespace' || fieldType === 'direction' || fieldType === 'tcp_flags') {
+                                valueOptionsList.style.display = 'block';
+                                filterValueSuggestions();
+                            } else {
+                                valueOptionsList.style.display = 'none';
+                            }
+                        } else {
+                            valueInputWrapper.classList.add('invalid');
+                            setTimeout(() => {
+                                valueInputWrapper.classList.remove('invalid');
+                            }, 2000);
+                        }
+                    }
+                } else if (e.key === 'Backspace' && this.value === '' && valueTags.length > 0) {
+                    e.preventDefault();
+                    removeValueTag(valueTags[valueTags.length - 1]);
+                }
             });
 
             function filterValueSuggestions() {
-                const inputValue = valueInput.value;
-                const lastSpaceIndex = inputValue.lastIndexOf(' ');
-                const currentWord = lastSpaceIndex >= 0 ?
-                    inputValue.substring(lastSpaceIndex + 1).toLowerCase() :
-                    inputValue.toLowerCase();
+                const inputValue = valueInputField.value;
+                const currentWord = stripQuotes(inputValue).toLowerCase();
 
                 // Get current value items from the dropdown
                 const currentValueItems = valueOptionsList.querySelectorAll('.value-item');
                 currentValueItems.forEach(item => {
+                    // Don't show items that are already selected
+                    if (item.getAttribute('data-selected') === 'true') {
+                        item.classList.add('hidden');
+                        return;
+                    }
+
                     const text = item.textContent.toLowerCase();
                     if (text.includes(currentWord)) {
                         item.classList.remove('hidden');
@@ -510,53 +752,6 @@
                         item.classList.add('hidden');
                     }
                 });
-            }
-
-            function validateValueInput() {
-                const fieldName = fieldInput.value.trim();
-                const fieldType = getFieldType(fieldName);
-                const inputValue = valueInput.value.trim();
-
-                // Empty value is okay
-                if (inputValue === '') {
-                    valueInput.classList.remove('invalid', 'valid');
-                    return;
-                }
-
-                let isValid = true;
-
-                // Validate based on field type
-                if (fieldType === 'ip') {
-                    const values = inputValue.split(/\s+/);
-                    const ipRegex = /^(\d{1,3}\.){3}\d{1,3}$/;
-                    isValid = values.every(val => ipRegex.test(val));
-                } else if (fieldType === 'mac') {
-                    const values = inputValue.split(/\s+/);
-                    // MAC address formats: XX:XX:XX:XX:XX:XX or XX-XX-XX-XX-XX-XX
-                    const macRegex = /^([0-9A-Fa-f]{2}[:-]){5}([0-9A-Fa-f]{2})$/;
-                    isValid = values.every(val => macRegex.test(val));
-                } else if (fieldType === 'direction') {
-                    const values = inputValue.split(/\s+/);
-                    const validDirections = ['ingress', 'egress'];
-                    isValid = values.every(val => validDirections.includes(val.toLowerCase()));
-                } else if (fieldType === 'tcp_flags') {
-                    const values = inputValue.split(/\s+/);
-                    const validFlags = ['FIN', 'SYN', 'RST', 'PSH', 'ACK', 'URG', 'ECE', 'CWR', 'SYN_ACK', 'FIN_ACK', 'RST_ACK'];
-                    isValid = values.every(val => validFlags.includes(val.toUpperCase()));
-                }
-
-                // Apply validation result
-                if (isValid && (fieldType === 'ip' || fieldType === 'mac' || fieldType === 'direction' || fieldType === 'tcp_flags')) {
-                    valueInput.classList.remove('invalid');
-                    valueInput.classList.add('valid');
-                    setTimeout(() => {
-                        valueInput.classList.remove('valid');
-                    }, 1000);
-                } else if (!isValid) {
-                    valueInput.classList.remove('valid');
-                    valueInput.classList.add('invalid');
-                }
-                // For namespace and text fields, no validation needed
             }
 
             // Close dropdowns when clicking outside
