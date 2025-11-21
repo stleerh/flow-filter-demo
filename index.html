@@ -65,9 +65,28 @@
         }
         .value-input-wrapper.invalid {
             border-color: #dc3545;
+            animation: shake 0.3s;
+        }
+        .value-input-wrapper.invalid:not(.has-tags) {
+            border: none;
+            animation: shake 0.3s;
+        }
+        .value-input-wrapper.invalid:not(.has-tags) .value-input-field {
+            border-color: #dc3545;
         }
         .value-input-wrapper.valid {
             border-color: #28a745;
+        }
+        .value-input-wrapper.valid:not(.has-tags) {
+            border: none;
+        }
+        .value-input-wrapper.valid:not(.has-tags) .value-input-field {
+            border-color: #28a745;
+        }
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-5px); }
+            75% { transform: translateX(5px); }
         }
         .value-tag {
             display: inline-flex;
@@ -677,6 +696,16 @@
             // Value input events
             valueInputField.addEventListener('focus', function() {
                 const fieldName = fieldInput.value.trim();
+
+                // Prevent entering values if field name is not selected
+                if (!fieldName) {
+                    fieldInput.focus();
+                    setTimeout(() => {
+                        fieldOptionsList.style.display = 'block';
+                    }, 0);
+                    return;
+                }
+
                 const fieldType = getFieldType(fieldName);
 
                 // Show dropdown for fields with dropdown options
@@ -686,12 +715,46 @@
                 }
             });
 
+            valueInputField.addEventListener('blur', function(e) {
+                const fieldName = fieldInput.value.trim();
+                if (!fieldName) return;
+
+                const fieldType = getFieldType(fieldName);
+                const inputValue = this.value.trim();
+
+                // Validate for IP and MAC fields on blur
+                if (fieldType === 'ip' || fieldType === 'mac') {
+                    if (inputValue) {
+                        const rawValue = this.value.trim();
+                        const value = stripQuotes(rawValue);
+
+                        if (isValidValue(value)) {
+                            valueInputWrapper.classList.remove('invalid');
+                            valueInputWrapper.classList.add('valid');
+                            setTimeout(() => {
+                                valueInputWrapper.classList.remove('valid');
+                            }, 1000);
+                        } else {
+                            valueInputWrapper.classList.remove('valid');
+                            valueInputWrapper.classList.add('invalid');
+                            // Don't remove invalid class - keep it until fixed
+                        }
+                    } else {
+                        // Clear validation state if input is empty
+                        valueInputWrapper.classList.remove('invalid', 'valid');
+                    }
+                }
+            });
+
             valueInputField.addEventListener('input', function() {
                 const fieldName = fieldInput.value.trim();
                 const fieldType = getFieldType(fieldName);
 
-                // Clear validation state while typing
-                valueInputWrapper.classList.remove('invalid', 'valid');
+                // Clear invalid state while typing (user is correcting)
+                // But only clear if they're actually typing something
+                if (this.value.trim()) {
+                    valueInputWrapper.classList.remove('invalid', 'valid');
+                }
 
                 // Show dropdown for fields with dropdown options
                 if (fieldType === 'namespace' || fieldType === 'direction' || fieldType === 'tcp_flags') {
@@ -701,14 +764,15 @@
             });
 
             valueInputField.addEventListener('keydown', function(e) {
-                if (e.key === ' ' || e.key === 'Enter') {
-                    e.preventDefault();
+                if (e.key === ' ' || e.key === 'Enter' || e.key === 'Tab') {
                     const rawValue = this.value.trim();
                     const value = stripQuotes(rawValue);
                     if (value) {
                         if (isValidValue(value)) {
+                            e.preventDefault();
                             addValueTag(value);
                             this.value = '';
+                            valueInputWrapper.classList.remove('invalid', 'valid');
 
                             // Show dropdown again for next value if applicable
                             const fieldName = fieldInput.value.trim();
@@ -720,11 +784,20 @@
                                 valueOptionsList.style.display = 'none';
                             }
                         } else {
+                            // Only prevent default for Space and Enter, not Tab
+                            if (e.key === ' ' || e.key === 'Enter') {
+                                e.preventDefault();
+                            }
+
+                            // Show invalid state - shake and red border
+                            valueInputWrapper.classList.remove('invalid');
+                            // Force reflow to restart animation
+                            void valueInputWrapper.offsetWidth;
                             valueInputWrapper.classList.add('invalid');
-                            setTimeout(() => {
-                                valueInputWrapper.classList.remove('invalid');
-                            }, 2000);
+                            // Keep invalid state - don't auto-remove
                         }
+                    } else if (e.key === ' ' || e.key === 'Enter') {
+                        e.preventDefault();
                     }
                 } else if (e.key === 'Backspace' && this.value === '' && valueTags.length > 0) {
                     e.preventDefault();
