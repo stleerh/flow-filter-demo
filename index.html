@@ -97,12 +97,38 @@
         .add-btn:hover {
             background-color: #218838;
         }
+        .controls-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .checkbox-container {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .checkbox-container input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+            cursor: pointer;
+        }
+        .checkbox-container label {
+            margin: 0;
+            font-weight: normal;
+            cursor: pointer;
+        }
     </style>
 </head>
 <body>
     <h1>Flow Filter</h1>
     <div id="filtersContainer"></div>
-    <button class="add-btn" onclick="addFilter()">+ Add Filter</button>
+    <div class="controls-row">
+        <button class="add-btn" onclick="addFilter()">+ Add Filter</button>
+        <div class="checkbox-container">
+            <input type="checkbox" id="returnTraffic">
+            <label for="returnTraffic">Return traffic</label>
+        </div>
+    </div>
 
     <script>
         let filterCount = 0;
