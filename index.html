@@ -366,6 +366,21 @@
                     return 'namespace';
                 }
 
+                // Check for MAC address fields
+                if (lowerFieldName === 'source mac' || lowerFieldName === 'dest mac') {
+                    return 'mac';
+                }
+
+                // Check for direction fields
+                if (lowerFieldName === 'interface directions' || lowerFieldName === 'node direction') {
+                    return 'direction';
+                }
+
+                // Check for TCP flags
+                if (lowerFieldName === 'tcp flags') {
+                    return 'tcp_flags';
+                }
+
                 // Check for IP fields
                 if (lowerFieldName.includes('ip')) {
                     return 'ip';
@@ -379,16 +394,46 @@
                 const fieldName = fieldInput.value.trim();
                 const fieldType = getFieldType(fieldName);
 
-                // Update placeholder and behavior based on field type
+                // Clear existing dropdown options and rebuild based on field type
+                valueOptionsList.innerHTML = '';
+
+                // Update placeholder and dropdown based on field type
                 if (fieldType === 'namespace') {
                     valueInput.placeholder = 'values (space-separated)';
-                    // Dropdown will be shown on focus
+                    // Rebuild namespace dropdown
+                    valueOptions.forEach(val => {
+                        const item = document.createElement('div');
+                        item.className = 'value-item';
+                        item.textContent = val;
+                        valueOptionsList.appendChild(item);
+                    });
+                    attachValueItemHandlers();
+                } else if (fieldType === 'direction') {
+                    valueInput.placeholder = 'Ingress or Egress';
+                    // Build direction dropdown
+                    ['Ingress', 'Egress'].forEach(val => {
+                        const item = document.createElement('div');
+                        item.className = 'value-item';
+                        item.textContent = val;
+                        valueOptionsList.appendChild(item);
+                    });
+                    attachValueItemHandlers();
+                } else if (fieldType === 'tcp_flags') {
+                    valueInput.placeholder = 'TCP flags (space-separated)';
+                    // Build TCP flags dropdown
+                    ['FIN', 'SYN', 'RST', 'PSH', 'ACK', 'URG', 'ECE', 'CWR', 'SYN_ACK', 'FIN_ACK', 'RST_ACK'].forEach(val => {
+                        const item = document.createElement('div');
+                        item.className = 'value-item';
+                        item.textContent = val;
+                        valueOptionsList.appendChild(item);
+                    });
+                    attachValueItemHandlers();
                 } else if (fieldType === 'ip') {
                     valueInput.placeholder = 'IP addresses (space-separated)';
-                    // No dropdown
+                } else if (fieldType === 'mac') {
+                    valueInput.placeholder = 'MAC addresses (space-separated)';
                 } else {
                     valueInput.placeholder = 'values (space-separated)';
-                    // No dropdown
                 }
 
                 // Clear the value input when field type changes
@@ -396,13 +441,35 @@
                 valueInput.classList.remove('invalid', 'valid');
             }
 
+            function attachValueItemHandlers() {
+                const currentValueItems = valueOptionsList.querySelectorAll('.value-item');
+                currentValueItems.forEach(item => {
+                    item.addEventListener('click', function() {
+                        const inputValue = valueInput.value;
+                        const lastSpaceIndex = inputValue.lastIndexOf(' ');
+
+                        if (lastSpaceIndex >= 0) {
+                            valueInput.value = inputValue.substring(0, lastSpaceIndex + 1) + this.textContent + ' ';
+                        } else {
+                            valueInput.value = this.textContent + ' ';
+                        }
+
+                        valueInput.focus();
+                        const fieldType = getFieldType(fieldInput.value.trim());
+                        if (fieldType === 'namespace' || fieldType === 'direction' || fieldType === 'tcp_flags') {
+                            filterValueSuggestions();
+                        }
+                    });
+                });
+            }
+
             // Value input events
             valueInput.addEventListener('focus', function() {
                 const fieldName = fieldInput.value.trim();
                 const fieldType = getFieldType(fieldName);
 
-                // Only show dropdown for namespace fields
-                if (fieldType === 'namespace') {
+                // Show dropdown for fields with dropdown options
+                if (fieldType === 'namespace' || fieldType === 'direction' || fieldType === 'tcp_flags') {
                     valueOptionsList.style.display = 'block';
                     filterValueSuggestions();
                 }
@@ -415,8 +482,8 @@
                 // Clear validation state while typing
                 valueInput.classList.remove('invalid', 'valid');
 
-                // Only show dropdown for namespace fields
-                if (fieldType === 'namespace') {
+                // Show dropdown for fields with dropdown options
+                if (fieldType === 'namespace' || fieldType === 'direction' || fieldType === 'tcp_flags') {
                     valueOptionsList.style.display = 'block';
                     filterValueSuggestions();
                 }
@@ -433,7 +500,9 @@
                     inputValue.substring(lastSpaceIndex + 1).toLowerCase() :
                     inputValue.toLowerCase();
 
-                valueItems.forEach(item => {
+                // Get current value items from the dropdown
+                const currentValueItems = valueOptionsList.querySelectorAll('.value-item');
+                currentValueItems.forEach(item => {
                     const text = item.textContent.toLowerCase();
                     if (text.includes(currentWord)) {
                         item.classList.remove('hidden');
@@ -454,41 +523,41 @@
                     return;
                 }
 
-                // Validate IP addresses
+                let isValid = true;
+
+                // Validate based on field type
                 if (fieldType === 'ip') {
                     const values = inputValue.split(/\s+/);
                     const ipRegex = /^(\d{1,3}\.){3}\d{1,3}$/;
-                    const allValid = values.every(val => ipRegex.test(val));
+                    isValid = values.every(val => ipRegex.test(val));
+                } else if (fieldType === 'mac') {
+                    const values = inputValue.split(/\s+/);
+                    // MAC address formats: XX:XX:XX:XX:XX:XX or XX-XX-XX-XX-XX-XX
+                    const macRegex = /^([0-9A-Fa-f]{2}[:-]){5}([0-9A-Fa-f]{2})$/;
+                    isValid = values.every(val => macRegex.test(val));
+                } else if (fieldType === 'direction') {
+                    const values = inputValue.split(/\s+/);
+                    const validDirections = ['ingress', 'egress'];
+                    isValid = values.every(val => validDirections.includes(val.toLowerCase()));
+                } else if (fieldType === 'tcp_flags') {
+                    const values = inputValue.split(/\s+/);
+                    const validFlags = ['FIN', 'SYN', 'RST', 'PSH', 'ACK', 'URG', 'ECE', 'CWR', 'SYN_ACK', 'FIN_ACK', 'RST_ACK'];
+                    isValid = values.every(val => validFlags.includes(val.toUpperCase()));
+                }
 
-                    if (allValid) {
-                        valueInput.classList.remove('invalid');
-                        valueInput.classList.add('valid');
-                        setTimeout(() => {
-                            valueInput.classList.remove('valid');
-                        }, 1000);
-                    } else {
+                // Apply validation result
+                if (isValid && (fieldType === 'ip' || fieldType === 'mac' || fieldType === 'direction' || fieldType === 'tcp_flags')) {
+                    valueInput.classList.remove('invalid');
+                    valueInput.classList.add('valid');
+                    setTimeout(() => {
                         valueInput.classList.remove('valid');
-                        valueInput.classList.add('invalid');
-                    }
+                    }, 1000);
+                } else if (!isValid) {
+                    valueInput.classList.remove('valid');
+                    valueInput.classList.add('invalid');
                 }
                 // For namespace and text fields, no validation needed
             }
-
-            valueItems.forEach(item => {
-                item.addEventListener('click', function() {
-                    const inputValue = valueInput.value;
-                    const lastSpaceIndex = inputValue.lastIndexOf(' ');
-
-                    if (lastSpaceIndex >= 0) {
-                        valueInput.value = inputValue.substring(0, lastSpaceIndex + 1) + this.textContent + ' ';
-                    } else {
-                        valueInput.value = this.textContent + ' ';
-                    }
-
-                    valueInput.focus();
-                    filterValueSuggestions();
-                });
-            });
 
             // Close dropdowns when clicking outside
             document.addEventListener('click', function(event) {
