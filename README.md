@@ -2,6 +2,8 @@
 
 A prototype for a network flow filter with intelligent field validation and context-aware value inputs.
 
+Try it out at [https://stleerh.github.io/flow-filter-demo/](https://stleerh.github.io/flow-filter-demo/).
+
 ## Features
 
 ### Multi-Filter Support
