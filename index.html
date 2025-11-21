@@ -41,6 +41,14 @@
             border-radius: 4px;
             box-sizing: border-box;
         }
+        .field-input.invalid {
+            color: #dc3545;
+            font-style: italic;
+            border-color: #dc3545;
+        }
+        .field-input.valid {
+            border-color: #28a745;
+        }
         .filter-row select {
             padding: 8px;
             font-size: 14px;
@@ -264,6 +272,10 @@
 
             fieldInput.addEventListener('input', function() {
                 const filter = this.value.toLowerCase();
+
+                // Clear invalid state while typing
+                fieldInput.classList.remove('invalid', 'valid');
+
                 fieldOptions.forEach(option => {
                     const text = option.textContent.toLowerCase();
                     if (text.includes(filter)) {
@@ -278,8 +290,45 @@
                 option.addEventListener('click', function() {
                     fieldInput.value = this.textContent;
                     fieldOptionsList.style.display = 'none';
+                    validateFieldInput();
                 });
             });
+
+            // Validate field input on blur
+            fieldInput.addEventListener('blur', function() {
+                validateFieldInput();
+            });
+
+            function validateFieldInput() {
+                const inputValue = fieldInput.value.trim();
+
+                // Empty value is okay, reset to normal
+                if (inputValue === '') {
+                    fieldInput.classList.remove('invalid', 'valid');
+                    return;
+                }
+
+                // Find case-insensitive match
+                const matchedOption = Array.from(fieldOptions).find(option =>
+                    option.textContent.toLowerCase() === inputValue.toLowerCase()
+                );
+
+                if (matchedOption) {
+                    // Valid: update to proper case
+                    fieldInput.value = matchedOption.textContent;
+                    fieldInput.classList.remove('invalid');
+                    fieldInput.classList.add('valid');
+
+                    // Remove valid class after 1 second
+                    setTimeout(() => {
+                        fieldInput.classList.remove('valid');
+                    }, 1000);
+                } else {
+                    // Invalid: mark as error
+                    fieldInput.classList.remove('valid');
+                    fieldInput.classList.add('invalid');
+                }
+            }
 
             // Value input events
             valueInput.addEventListener('focus', function() {
